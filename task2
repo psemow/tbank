@@ -1,0 +1,282 @@
+import json
+import os
+from datetime import datetime
+
+FILE_NAME = "liba.json"
+
+def main():
+    lib = load()
+
+    while True:
+        print("\n1.Добавить\n2.Все\n3.Поиск\n4.Избранное\n5.Статус\n6.Удалить\n7.В избранное\n8.Из избранного\n9.Стата\n0.Выход\n")
+
+        c = input("Выбор: ")
+
+        if c == "1":
+            add(lib)
+        elif c == "2":
+            view(lib)
+        elif c == "3":
+            search(lib)
+        elif c == "4":
+            favs(lib)
+        elif c == "5":
+            status(lib)
+        elif c == "6":
+            delete(lib)
+        elif c == "7":
+            to_fav(lib)
+        elif c == "8":
+            from_fav(lib)
+        elif c == "9":
+            stats(lib)
+        elif c == "0":
+            save(lib)
+            print("Пока")
+            break
+        else:
+            print("???")
+
+
+def load():
+    if not os.path.exists(FILE_NAME):
+        print("Новый файл")
+        return []
+    try:
+        with open(FILE_NAME, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        print("Ошибка загрузки")
+        return []
+
+
+def save(lib):
+    try:
+        with open(FILE_NAME, 'w', encoding='utf-8') as f:
+            json.dump(lib, f, ensure_ascii=False, indent=2)
+        print(f"Сохранено {len(lib)}")
+    except:
+        print("Ошибка сохранения")
+
+
+def add(lib):
+    print("--- Новая книга ---")
+
+    title = input("Название: ")
+    if not title: return print("Пусто")
+
+    author = input("Автор: ")
+    if not author: return print("Пусто")
+
+    genre = input("Жанр: ")
+    if not genre: return print("Пусто")
+
+    try:
+        year = int(input("Год: "))
+        if year < 0 or year > datetime.now().year:
+            return print("Не год")
+    except:
+        return print("Цифрой")
+
+    desc = input("Описание: ") or "нет"
+
+    lib.append({
+        "id": len(lib) + 1,
+        "title": title,
+        "author": author,
+        "genre": genre,
+        "year": year,
+        "desc": desc,
+        "status": "не прочитана",
+        "fav": False,
+        "date": str(datetime.now().date())
+    })
+    print("Готово")
+
+
+def view(lib):
+    if not lib: return print("Пусто")
+
+    print("Сортировка:\n1.Название\n2.Автор\n3.Год\n4.Жанр\n5.Нет\n")
+    s = input("Выбор: ")
+
+    books = lib.copy()
+
+    if s == "1":
+        books.sort(key=lambda x: x["title"].lower())
+    elif s == "2":
+        books.sort(key=lambda x: x["author"].lower())
+    elif s == "3":
+        books.sort(key=lambda x: x["year"])
+    elif s == "4":
+        books.sort(key=lambda x: x["genre"].lower())
+
+    print("Фильтр:\n1.Жанр\n2.Статус\n3.Нет\n")
+    f = input("Выбор: ")
+
+    if f == "1":
+        g = input("Жанр: ").lower()
+        books = [b for b in books if b["genre"].lower() == g]
+    elif f == "2":
+        print("1.Прочитано\n2.Нет\n")
+        st = input("Выбор: ")
+        if st == "1":
+            books = [b for b in books if b["status"] == "прочитана"]
+        elif st == "2":
+            books = [b for b in books if b["status"] == "не прочитана"]
+
+    if not books: return print("Нет")
+
+    for b in books:
+        fav = "избр" if b["fav"] else ""
+        print(f"{fav} {b['id']}. {b['title']} - {b['author']} ({b['year']})")
+        print(f"   {b['genre']} | {b['status']}")
+        print(f"   {b['desc'][:50]}...")
+
+
+def search(lib):
+    if not lib: return print("Пусто")
+
+    print("Поиск по:\n1.Название\n2.Автор\n3.Описание\n4.Всё\n")
+    t = input("Выбор: ")
+    word = input("Что ищем: ").lower()
+    if not word: return print("Пусто")
+
+    res = []
+    for b in lib:
+        if t == "1" and word in b["title"].lower():
+            res.append(b)
+        elif t == "2" and word in b["author"].lower():
+            res.append(b)
+        elif t == "3" and word in b["desc"].lower():
+            res.append(b)
+        elif t == "4" and (word in b["title"].lower() or word in b["author"].lower() or word in b["desc"].lower()):
+            res.append(b)
+
+    if res:
+        print(f"Найдено: {len(res)}")
+        for b in res:
+            fav = "избр" if b["fav"] else ""
+            print(f"{fav} {b['id']}. {b['title']} - {b['author']}")
+    else:
+        print("Ничего")
+
+
+def favs(lib):
+    fav = [b for b in lib if b["fav"]]
+    if not fav: return print("Пусто")
+
+    for b in fav:
+        print(f"избр {b['id']}. {b['title']} - {b['author']}")
+
+
+def status(lib):
+    if not lib: return print("Пусто")
+
+    try:
+        id = int(input("ID: "))
+    except:
+        return print("Цифрой")
+
+    b = get_book(lib, id)
+    if not b: return print("Нет такого")
+
+    print(f"{b['title']}: {b['status']}")
+    print("1.Прочитано\n2.Не прочитано\n")
+    s = input("Выбор: ")
+
+    if s == "1":
+        b["status"] = "прочитана"
+        print("Готово")
+    elif s == "2":
+        b["status"] = "не прочитана"
+        print("Готово")
+
+
+def delete(lib):
+    if not lib: return print("Пусто")
+
+    try:
+        id = int(input("ID для удаления: "))
+    except:
+        return print("Цифрой")
+
+    b = get_book(lib, id)
+    if not b: return print("Нет такого")
+
+    print(f"{b['title']} - {b['author']}")
+    if input("Точно? (д/н): ").lower() == "д":
+        lib.remove(b)
+        print("Удалено")
+
+
+def to_fav(lib):
+    if not lib: return print("Пусто")
+
+    try:
+        id = int(input("ID: "))
+    except:
+        return print("Цифрой")
+
+    b = get_book(lib, id)
+    if not b: return print("Нет такого")
+
+    if b["fav"]:
+        print("Уже в избранном")
+    else:
+        b["fav"] = True
+        print("Добавлено")
+
+
+def from_fav(lib):
+    if not lib: return print("Пусто")
+
+    try:
+        id = int(input("ID: "))
+    except:
+        return print("Цифрой")
+
+    b = get_book(lib, id)
+    if not b: return print("Нет такого")
+
+    if not b["fav"]:
+        print("Не в избранном")
+    else:
+        b["fav"] = False
+        print("Убрано")
+
+
+def stats(lib):
+    if not lib: return print("Пусто")
+
+    total = len(lib)
+    read = len([b for b in lib if b["status"] == "прочитана"])
+    fav = len([b for b in lib if b["fav"]])
+
+    genres = {}
+    authors = {}
+    for b in lib:
+        genres[b["genre"]] = genres.get(b["genre"], 0) + 1
+        authors[b["author"]] = authors.get(b["author"], 0) + 1
+
+    top_g = sorted(genres.items(), key=lambda x: x[1], reverse=True)[:3]
+    top_a = sorted(authors.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    print(f"\nВсего: {total}")
+    print(f"Прочитано: {read} ({read / total * 100:.0f}%)")
+    print(f"В избранном: {fav}")
+    print("\nТоп жанры:")
+    for g, c in top_g: print(f"  {g}: {c}")
+    print("\nТоп авторы:")
+    for a, c in top_a: print(f"  {a}: {c}")
+
+
+def get_book(lib, id):
+    for b in lib:
+        if b["id"] == id:
+            return b
+    return None
+
+
+if __name__ == "__main__":
+    main()
