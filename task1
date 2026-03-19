@@ -1,0 +1,19 @@
+start = int(input("Начало диапазона: "))
+stop = int(input("Конец диапазона: "))
+miau = []
+
+if start > stop:
+    print("Ошибка")
+else:
+    a = 0
+    b = 1
+    if a >= start and a <= stop:
+        miau.append(str(a))
+    while b <= stop:
+        if b >= start:
+            miau.append(str(b))
+        a, b = b, a + b
+    if miau:
+        print(' '.join(miau))
+    else:
+        print("В заданном диапазоне нет чисел Фибоначчи")
